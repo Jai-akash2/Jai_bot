@@ -1,4 +1,5 @@
 import os
+import uuid
 from typing import List, Optional
 from dotenv import load_dotenv
 
@@ -10,6 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from agent.mentor_agent import create_mentor_agent, format_history
+from memory import db
 
 load_dotenv()
 
@@ -66,17 +68,25 @@ def get_agent():
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     try:
-        agent = get_agent()
-        history = format_history([msg.model_dump() for msg in request.history])
+        session_id = request.session_id or str(uuid.uuid4())[:8]
 
+        db.save_chat_message(session_id, "user", request.message)
+
+        saved = db.get_chat_history(session_id, limit=20)
+        history = format_history(saved)
+
+        agent = get_agent()
         result = await agent.ainvoke({
             "input": request.message,
             "chat_history": history,
         })
 
+        response_text = result["output"]
+        db.save_chat_message(session_id, "assistant", response_text)
+
         return ChatResponse(
-            response=result["output"],
-            session_id=request.session_id,
+            response=response_text,
+            session_id=session_id,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
