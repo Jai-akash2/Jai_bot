@@ -45,7 +45,7 @@ Current date: 2026-06-12"""
 
 def create_mentor_agent(
     api_key: str,
-    model: str = "qwen/qwen3-coder:free",
+    model: str = "openrouter/free",
     temperature: float = 0.7,
 ) -> AgentExecutor:
     llm = ChatOpenAI(
@@ -53,6 +53,8 @@ def create_mentor_agent(
         base_url="https://openrouter.ai/api/v1",
         model=model,
         temperature=temperature,
+        timeout=20,
+        max_retries=1,
         default_headers={
             "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", ""),
             "X-Title": os.getenv("OPENROUTER_APP_NAME", "DS-Mentor-Bot"),
