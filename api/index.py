@@ -132,6 +132,8 @@ class TaskPayload(BaseModel):
     description: str = ""
     deadline: str = ""
     priority: str = "medium"
+    recurring: str = ""
+    subtasks: str = ""
 
 
 @app.get("/api/tasks")
@@ -141,7 +143,7 @@ async def list_tasks(status: str = ""):
 
 @app.post("/api/tasks")
 async def create_task(payload: TaskPayload):
-    task_id = db.add_task(payload.title, payload.description, payload.deadline, payload.priority)
+    task_id = db.add_task(payload.title, payload.description, payload.deadline, payload.priority, payload.recurring, payload.subtasks)
     return {"id": task_id, "message": "Task added"}
 
 

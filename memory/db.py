@@ -20,6 +20,7 @@ def init_db():
             title TEXT NOT NULL,
             content TEXT NOT NULL,
             tags TEXT DEFAULT '',
+            pinned INTEGER DEFAULT 0,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
@@ -31,6 +32,8 @@ def init_db():
             deadline TEXT,
             priority TEXT DEFAULT 'medium',
             status TEXT DEFAULT 'pending',
+            recurring TEXT DEFAULT '',
+            subtasks TEXT DEFAULT '',
             created_at TEXT NOT NULL,
             completed_at TEXT
         );
@@ -54,6 +57,13 @@ def init_db():
 
         CREATE INDEX IF NOT EXISTS idx_chat_session ON chat_history(session_id);
     """)
+    # Migrate old tables
+    try: conn.execute("ALTER TABLE notes ADD COLUMN pinned INTEGER DEFAULT 0")
+    except: pass
+    try: conn.execute("ALTER TABLE tasks ADD COLUMN recurring TEXT DEFAULT ''")
+    except: pass
+    try: conn.execute("ALTER TABLE tasks ADD COLUMN subtasks TEXT DEFAULT ''")
+    except: pass
     conn.commit()
     conn.close()
 
@@ -100,12 +110,12 @@ def delete_note(note_id: int) -> bool:
 
 # --- Tasks ---
 
-def add_task(title: str, description: str = "", deadline: str = "", priority: str = "medium") -> int:
+def add_task(title: str, description: str = "", deadline: str = "", priority: str = "medium", recurring: str = "", subtasks: str = "") -> int:
     now = datetime.now().isoformat()
     conn = get_conn()
     cur = conn.execute(
-        "INSERT INTO tasks (title, description, deadline, priority, status, created_at) VALUES (?, ?, ?, ?, 'pending', ?)",
-        (title, description, deadline, priority, now),
+        "INSERT INTO tasks (title, description, deadline, priority, status, recurring, subtasks, created_at) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)",
+        (title, description, deadline, priority, recurring, subtasks, now),
     )
     task_id = cur.lastrowid
     conn.commit()
