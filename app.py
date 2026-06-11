@@ -13,7 +13,7 @@ def main():
         print("   Copy .env.example to .env and add your key")
         return
 
-    model = os.getenv("OPENROUTER_MODEL", "openrouter/free")
+    model = os.getenv("OPENROUTER_MODEL", "qwen/qwen3-coder:free")
     agent = create_mentor_agent(api_key, model)
 
     print(f"\n{'='*50}")

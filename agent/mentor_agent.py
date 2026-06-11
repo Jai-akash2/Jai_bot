@@ -45,7 +45,7 @@ Current date: 2026-06-12"""
 
 def create_mentor_agent(
     api_key: str,
-    model: str = "openrouter/free",
+    model: str = "qwen/qwen3-coder:free",
     temperature: float = 0.7,
 ) -> AgentExecutor:
     llm = ChatOpenAI(
@@ -75,8 +75,9 @@ def create_mentor_agent(
         tools=tools,
         verbose=True,
         handle_parsing_errors=True,
-        max_iterations=8,
-        max_execution_time=30,
+        max_iterations=12,
+        max_execution_time=45,
+        early_stopping_method="generate",
     )
 
 
