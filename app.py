@@ -13,7 +13,7 @@ def main():
         print("   Copy .env.example to .env and add your key")
         return
 
-    model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.1-8b-instruct:free")
+    model = os.getenv("OPENROUTER_MODEL", "openrouter/free")
     agent = create_mentor_agent(api_key, model)
 
     print(f"\n{'='*50}")

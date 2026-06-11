@@ -44,7 +44,7 @@ def get_agent():
     global _agent
     if _agent is None:
         api_key = os.getenv("OPENROUTER_API_KEY")
-        model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.1-8b-instruct:free")
+        model = os.getenv("OPENROUTER_MODEL", "openrouter/free")
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY not set")
         _agent = create_mentor_agent(api_key, model)

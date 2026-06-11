@@ -37,7 +37,7 @@ Current date: 2026-06-12"""
 
 def create_mentor_agent(
     api_key: str,
-    model: str = "meta-llama/llama-3.1-8b-instruct:free",
+    model: str = "openrouter/free",
     temperature: float = 0.7,
 ) -> AgentExecutor:
     llm = ChatOpenAI(
