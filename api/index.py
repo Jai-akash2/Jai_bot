@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import datetime
 from typing import List, Optional
 from dotenv import load_dotenv
 
@@ -12,6 +13,7 @@ from pydantic import BaseModel
 
 from agent.mentor_agent import create_mentor_agent, format_history
 from memory import db
+from notification.notifier import check_and_notify
 
 load_dotenv()
 
@@ -97,6 +99,20 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/api/notifications/check")
+async def check_notifications():
+    alerts = check_and_notify()
+    tasks = db.list_tasks("pending")
+    today = datetime.now().strftime("%Y-%m-%d")
+    due = [t for t in tasks if t["deadline"] == today]
+    overdue = [t for t in tasks if t["deadline"] and t["deadline"] < today]
+    return {
+        "alerts": alerts,
+        "due_today": [t["title"] for t in due],
+        "overdue": [t["title"] for t in overdue],
+    }
+
+
 # --- Notes API ---
 
 class NotePayload(BaseModel):
@@ -144,6 +160,8 @@ async def list_tasks(status: str = ""):
 @app.post("/api/tasks")
 async def create_task(payload: TaskPayload):
     task_id = db.add_task(payload.title, payload.description, payload.deadline, payload.priority, payload.recurring, payload.subtasks)
+    if payload.deadline:
+        check_and_notify()
     return {"id": task_id, "message": "Task added"}
 
 
