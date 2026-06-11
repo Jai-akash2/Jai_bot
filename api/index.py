@@ -95,3 +95,85 @@ async def chat(request: ChatRequest):
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
+
+
+# --- Notes API ---
+
+class NotePayload(BaseModel):
+    title: str
+    content: str
+    tags: str = ""
+
+
+@app.get("/api/notes")
+async def list_notes(q: str = ""):
+    if q:
+        return db.search_notes(q)
+    return db.get_all_notes()
+
+
+@app.post("/api/notes")
+async def create_note(payload: NotePayload):
+    note_id = db.save_note(payload.title, payload.content, payload.tags)
+    return {"id": note_id, "message": "Note saved"}
+
+
+@app.delete("/api/notes/{note_id}")
+async def delete_note(note_id: int):
+    if db.delete_note(note_id):
+        return {"message": "Deleted"}
+    raise HTTPException(404, "Note not found")
+
+
+# --- Tasks API ---
+
+class TaskPayload(BaseModel):
+    title: str
+    description: str = ""
+    deadline: str = ""
+    priority: str = "medium"
+
+
+@app.get("/api/tasks")
+async def list_tasks(status: str = ""):
+    return db.list_tasks(status)
+
+
+@app.post("/api/tasks")
+async def create_task(payload: TaskPayload):
+    task_id = db.add_task(payload.title, payload.description, payload.deadline, payload.priority)
+    return {"id": task_id, "message": "Task added"}
+
+
+@app.put("/api/tasks/{task_id}/complete")
+async def complete_task(task_id: int):
+    if db.complete_task(task_id):
+        return {"message": "Completed"}
+    raise HTTPException(404, "Task not found")
+
+
+@app.delete("/api/tasks/{task_id}")
+async def delete_task(task_id: int):
+    if db.delete_task(task_id):
+        return {"message": "Deleted"}
+    raise HTTPException(404, "Task not found")
+
+
+# --- Progress API ---
+
+class LearningPayload(BaseModel):
+    topic: str
+    summary: str = ""
+    resource: str = ""
+    time_spent: int = 0
+
+
+@app.get("/api/progress")
+async def get_progress():
+    return db.get_learning_progress()
+
+
+@app.post("/api/progress")
+async def log_progress(payload: LearningPayload):
+    log_id = db.log_learning(payload.topic, payload.summary, payload.resource, payload.time_spent)
+    return {"id": log_id, "message": "Progress logged"}

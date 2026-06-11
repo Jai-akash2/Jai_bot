@@ -1,155 +1,628 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Buddy - DS Mentor</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0f0f23; color: #e0e0e0; height: 100vh; display: flex;
-      flex-direction: column;
-    }
-    header {
-      background: linear-gradient(135deg, #1a1a3e, #2d1b4e);
-      padding: 16px 24px; display: flex; align-items: center;
-      border-bottom: 1px solid #333366; gap: 12px;
-    }
-    header h1 { font-size: 20px; font-weight: 600; }
-    header span { color: #8888cc; font-size: 13px; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; display: inline-block; }
-    #chat { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-    .msg { max-width: 80%; padding: 12px 16px; border-radius: 12px; line-height: 1.5; font-size: 14px; white-space: pre-wrap; }
-    .msg.user { align-self: flex-end; background: #2563eb; color: white; border-bottom-right-radius: 4px; }
-    .msg.assistant { align-self: flex-start; background: #1e1e3f; border: 1px solid #333366; border-bottom-left-radius: 4px; }
-    .msg.assistant code { background: #2d2d5e; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
-    .msg.assistant pre {
-      background: #0a0a1a; padding: 12px; border-radius: 8px; overflow-x: auto;
-      margin: 8px 0; border: 1px solid #333366;
-    }
-    .msg.assistant pre code { background: transparent; padding: 0; }
-    .typing { align-self: flex-start; background: #1e1e3f; border: 1px solid #333366; border-radius: 12px; padding: 12px 20px; display: flex; gap: 4px; }
-    .typing span { width: 6px; height: 6px; background: #8888cc; border-radius: 50%; animation: bounce 1.4s infinite; }
-    .typing span:nth-child(2) { animation-delay: 0.2s; }
-    .typing span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-8px); } }
-    #input-area { padding: 16px 20px; border-top: 1px solid #333366; background: #1a1a3e; display: flex; gap: 12px; }
-    #input { flex: 1; background: #0f0f23; border: 1px solid #333366; border-radius: 24px; padding: 12px 20px; color: #e0e0e0; font-size: 14px; outline: none; }
-    #input:focus { border-color: #2563eb; }
-    #send { background: #2563eb; border: none; border-radius: 50%; width: 44px; height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    #send:hover { background: #1d4ed8; }
-    #send:disabled { background: #333366; cursor: not-allowed; }
-    .welcome { text-align: center; color: #8888cc; margin-top: 40px; }
-    .welcome h2 { font-size: 24px; color: #ccccee; margin-bottom: 8px; }
-    .welcome p { font-size: 14px; line-height: 1.6; }
-    .suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 20px; }
-    .suggestions button { background: #1e1e3f; border: 1px solid #333366; color: #8888cc; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; }
-    .suggestions button:hover { border-color: #2563eb; color: #ccccee; }
-    .error-msg { color: #f87171; text-align: center; font-size: 13px; padding: 8px; }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Buddy - Personal Assistant</title>
+<style>
+:root {
+  --bg: #0a0a1a;
+  --surface: #12122a;
+  --surface2: #1a1a3e;
+  --border: #2a2a5a;
+  --text: #e0e0f0;
+  --text2: #8888bb;
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --green: #22c55e;
+  --red: #ef4444;
+  --orange: #f59e0b;
+  --sidebar-w: 240px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg); color: var(--text); height: 100vh; overflow: hidden;
+  display: flex;
+}
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius:3px; }
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-w); background: var(--surface);
+  border-right:1px solid var(--border); display:flex; flex-direction:column;
+  flex-shrink:0;
+}
+.sidebar-header {
+  padding:20px 16px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:10px;
+}
+.sidebar-header .logo { width:32px; height:32px; background:var(--accent); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+.sidebar-header h1 { font-size:16px; font-weight:600; }
+.sidebar-header span { font-size:11px; color:var(--text2); }
+.nav { flex:1; padding:12px 8px; display:flex; flex-direction:column; gap:2px; }
+.nav a {
+  padding:10px 14px; border-radius:8px; display:flex; align-items:center; gap:10px;
+  color:var(--text2); text-decoration:none; font-size:14px; cursor:pointer; transition:all .15s;
+}
+.nav a:hover { background:var(--surface2); color:var(--text); }
+.nav a.active { background:var(--accent); color:white; }
+.nav a .icon { font-size:16px; width:20px; text-align:center; }
+.sidebar-footer { padding:12px 16px; border-top:1px solid var(--border); font-size:12px; color:var(--text2); }
+
+/* Main */
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.page-header {
+  padding:20px 28px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.page-header h2 { font-size:20px; font-weight:600; }
+.page-header p { font-size:13px; color:var(--text2); margin-top:2px; }
+.page-content { flex:1; overflow-y:auto; padding:24px 28px; }
+
+/* Pages */
+.page { display:none; }
+.page.active { display:block; }
+
+/* Dashboard cards */
+.cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-bottom:24px; }
+.card {
+  background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  padding:20px; transition:border-color .15s;
+}
+.card:hover { border-color:var(--accent); }
+.card .num { font-size:28px; font-weight:700; color:var(--accent); }
+.card .label { font-size:13px; color:var(--text2); margin-top:4px; }
+.card .sub { font-size:12px; color:var(--text2); margin-top:8px; }
+.recent-section { margin-top:8px; }
+.recent-section h3 { font-size:14px; color:var(--text2); margin-bottom:12px; }
+.recent-item {
+  background:var(--surface); border:1px solid var(--border); border-radius:8px;
+  padding:12px 16px; margin-bottom:8px; font-size:13px;
+}
+.recent-item .title { font-weight:500; }
+.recent-item .meta { color:var(--text2); font-size:12px; margin-top:2px; }
+
+/* Chat */
+#chat-page .chat-area { display:flex; flex-direction:column; height:calc(100vh - 140px); }
+.chat-messages { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding-bottom:12px; }
+.msg { max-width:80%; padding:12px 16px; border-radius:12px; line-height:1.5; font-size:14px; white-space:pre-wrap; }
+.msg.user { align-self:flex-end; background:var(--accent); color:white; border-bottom-right-radius:4px; }
+.msg.assistant { align-self:flex-start; background:var(--surface); border:1px solid var(--border); border-bottom-left-radius:4px; }
+.msg.assistant code { background:var(--surface2); padding:2px 6px; border-radius:4px; font-size:13px; }
+.msg.assistant pre { background:#050510; padding:12px; border-radius:8px; overflow-x:auto; margin:8px 0; border:1px solid var(--border); }
+.msg.assistant pre code { background:transparent; padding:0; }
+.typing { align-self:flex-start; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 20px; display:flex; gap:4px; }
+.typing span { width:6px; height:6px; background:var(--text2); border-radius:50%; animation:bounce 1.4s infinite; }
+.typing span:nth-child(2) { animation-delay:.2s; }
+.typing span:nth-child(3) { animation-delay:.4s; }
+@keyframes bounce { 0%,80%,100% { transform:translateY(0); } 40% { transform:translateY(-8px); } }
+.chat-input-area { display:flex; gap:12px; padding-top:12px; border-top:1px solid var(--border); }
+.chat-input-area input {
+  flex:1; background:var(--surface); border:1px solid var(--border); border-radius:24px;
+  padding:12px 20px; color:var(--text); font-size:14px; outline:none;
+}
+.chat-input-area input:focus { border-color:var(--accent); }
+.chat-input-area button {
+  background:var(--accent); border:none; border-radius:50%; width:44px; height:44px;
+  cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.chat-input-area button:hover { background:var(--accent-hover); }
+.chat-input-area button:disabled { background:var(--border); cursor:not-allowed; }
+.welcome-msg { text-align:center; color:var(--text2); margin-top:40px; }
+.welcome-msg h2 { font-size:22px; color:var(--text); margin-bottom:6px; }
+.suggestions { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:16px; }
+.suggestions button {
+  background:var(--surface); border:1px solid var(--border); color:var(--text2);
+  padding:8px 16px; border-radius:20px; cursor:pointer; font-size:13px;
+}
+.suggestions button:hover { border-color:var(--accent); color:var(--text); }
+
+/* Lists */
+.list-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.list-header h3 { font-size:15px; color:var(--text2); }
+.btn {
+  background:var(--accent); color:white; border:none; padding:8px 18px; border-radius:8px;
+  cursor:pointer; font-size:13px; font-weight:500; transition:background .15s;
+}
+.btn:hover { background:var(--accent-hover); }
+.btn-sm { padding:5px 12px; font-size:12px; }
+.btn-outline { background:transparent; border:1px solid var(--border); color:var(--text2); }
+.btn-outline:hover { border-color:var(--accent); color:var(--text); }
+.btn-danger { background:var(--red); }
+.btn-danger:hover { opacity:.85; }
+.btn-green { background:var(--green); }
+.item-list { display:flex; flex-direction:column; gap:8px; }
+.item {
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px;
+}
+.item .info { flex:1; min-width:0; }
+.item .info .title { font-weight:500; font-size:14px; }
+.item .info .desc { color:var(--text2); font-size:12px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.item .info .tags { color:var(--accent); font-size:11px; margin-top:4px; }
+.item .actions { display:flex; gap:6px; flex-shrink:0; }
+.task-pending { border-left:3px solid var(--orange); }
+.task-completed { border-left:3px solid var(--green); opacity:.7; }
+.task-completed .info .title { text-decoration:line-through; }
+.priority-badge { font-size:10px; padding:2px 8px; border-radius:10px; margin-left:8px; }
+.priority-high { background:#7f1d1d; color:#fca5a5; }
+.priority-medium { background:#713f12; color:#fde68a; }
+.priority-low { background:#14532d; color:#86efac; }
+.status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:8px; }
+.status-dot.online { background:var(--green); }
+
+/* Modal */
+.modal-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.6);
+  align-items:center; justify-content:center; z-index:100;
+}
+.modal-overlay.open { display:flex; }
+.modal {
+  background:var(--surface); border:1px solid var(--border); border-radius:16px;
+  padding:28px; width:460px; max-width:90vw; max-height:80vh; overflow-y:auto;
+}
+.modal h3 { font-size:18px; margin-bottom:20px; }
+.form-group { margin-bottom:16px; }
+.form-group label { display:block; font-size:13px; color:var(--text2); margin-bottom:6px; }
+.form-group input, .form-group textarea, .form-group select {
+  width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px;
+  padding:10px 14px; color:var(--text); font-size:14px; outline:none; font-family:inherit;
+}
+.form-group textarea { min-height:80px; resize:vertical; }
+.form-group input:focus, .form-group textarea:focus { border-color:var(--accent); }
+.modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+
+/* Toast */
+.toast-container { position:fixed; bottom:24px; right:24px; z-index:200; display:flex; flex-direction:column; gap:8px; }
+.toast {
+  background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+  padding:14px 20px; font-size:13px; animation:slideIn .3s ease;
+  min-width:240px; box-shadow:0 4px 24px rgba(0,0,0,.4);
+}
+.toast.success { border-color:var(--green); }
+.toast.error { border-color:var(--red); }
+@keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+
+.empty-state { text-align:center; color:var(--text2); padding:40px 0; font-size:14px; }
+</style>
 </head>
 <body>
-  <header>
-    <span class="status-dot"></span>
-    <h1>🧠 Buddy</h1>
-    <span>your DS mentor</span>
-  </header>
 
-  <div id="chat">
-    <div class="welcome" id="welcome">
-      <h2>Hey Jaiakash! 👋</h2>
-      <p>Ask me anything about Python, SQL, Stats, ML, or Data Viz.<br />I can search the web for the latest info too.</p>
-      <div class="suggestions">
-        <button onclick="sendSuggestion('Explain Python decorators with an example')">Python decorators</button>
-        <button onclick="sendSuggestion('What should I learn this week?')">What to learn next?</button>
-        <button onclick="sendSuggestion('Difference between r2 and adjusted r2')">R² vs Adj R²</button>
-        <button onclick="sendSuggestion('SQL window functions explained simply')">SQL window functions</button>
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">B</div>
+    <div><h1>Buddy</h1><span>personal assistant</span></div>
+  </div>
+  <nav class="nav">
+    <a class="active" data-page="dashboard"><span class="icon">&#9632;</span> Dashboard</a>
+    <a data-page="chat"><span class="icon">&#9993;</span> Chat</a>
+    <a data-page="notes"><span class="icon">&#128221;</span> Notes</a>
+    <a data-page="tasks"><span class="icon">&#9744;</span> Tasks</a>
+    <a data-page="progress"><span class="icon">&#9654;</span> Learning</a>
+  </nav>
+  <div class="sidebar-footer">local memory &middot; openrouter</div>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Dashboard -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header"><div><h2>Dashboard</h2><p><span class="status-dot online"></span> Buddy is ready</p></div></div>
+    <div class="page-content">
+      <div class="cards" id="stats-cards"></div>
+      <div class="recent-section">
+        <h3>Recent Activity</h3>
+        <div id="recent-activity"><div class="empty-state">No activity yet. Start chatting or add some notes!</div></div>
       </div>
     </div>
   </div>
 
-  <div id="input-area">
-    <input id="input" type="text" placeholder="Ask me anything..." autofocus />
-    <button id="send" onclick="sendMessage()" disabled>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-    </button>
+  <!-- Chat -->
+  <div class="page" id="page-chat">
+    <div class="page-header"><div><h2>Chat</h2><p>Ask me anything about DS, ML, or your tasks</p></div></div>
+    <div class="page-content chat-area">
+      <div class="chat-messages" id="chat-messages">
+        <div class="welcome-msg" id="welcome-msg">
+          <h2>Hey Jaiakash!</h2>
+          <p>Ask me anything about Python, SQL, Stats, ML, or Data Viz.<br/>I remember our past conversations and can search the web.</p>
+          <div class="suggestions">
+            <button onclick="sendSuggestion('Explain Python decorators with an example')">Python decorators</button>
+            <button onclick="sendSuggestion('What should I learn this week?')">What to learn next?</button>
+            <button onclick="sendSuggestion('Add task: practice pandas tomorrow')">Add a task</button>
+            <button onclick="sendSuggestion('Save a note about list comprehensions')">Save a note</button>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <input id="chat-input" placeholder="Ask me anything..." autofocus/>
+        <button id="chat-send" disabled><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+      </div>
+    </div>
   </div>
 
-  <script>
-    const chat = document.getElementById('chat');
-    const input = document.getElementById('input');
-    const sendBtn = document.getElementById('send');
-    const welcome = document.getElementById('welcome');
-    let sessionId = localStorage.getItem('buddy_session') || crypto.randomUUID().slice(0,8);
-    localStorage.setItem('buddy_session', sessionId);
-    let loading = false;
+  <!-- Notes -->
+  <div class="page" id="page-notes">
+    <div class="page-header">
+      <div><h2>Notes</h2><p>Your personal knowledge base</p></div>
+      <button class="btn" onclick="openModal('note-modal')">+ New Note</button>
+    </div>
+    <div class="page-content">
+      <div class="list-header">
+        <h3 id="notes-count"></h3>
+        <input id="notes-search" placeholder="Search notes..." style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);font-size:13px;outline:none;width:200px;" oninput="loadNotes()"/>
+      </div>
+      <div class="item-list" id="notes-list"></div>
+    </div>
+  </div>
 
-    input.addEventListener('input', () => {
-      sendBtn.disabled = !input.value.trim() || loading;
+  <!-- Tasks -->
+  <div class="page" id="page-tasks">
+    <div class="page-header">
+      <div><h2>Tasks</h2><p>Track your learning goals</p></div>
+      <button class="btn" onclick="openModal('task-modal')">+ New Task</button>
+    </div>
+    <div class="page-content">
+      <div class="list-header">
+        <h3 id="tasks-count"></h3>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm btn-outline" data-filter="all" onclick="filterTasks('all')">All</button>
+          <button class="btn btn-sm btn-outline" data-filter="pending" onclick="filterTasks('pending')">Pending</button>
+          <button class="btn btn-sm btn-outline" data-filter="completed" onclick="filterTasks('completed')">Done</button>
+        </div>
+      </div>
+      <div class="item-list" id="tasks-list"></div>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="page" id="page-progress">
+    <div class="page-header">
+      <div><h2>Learning Log</h2><p>Track what you study, day by day</p></div>
+      <button class="btn" onclick="openModal('progress-modal')">+ Log Session</button>
+    </div>
+    <div class="page-content">
+      <div class="cards" id="progress-stats" style="margin-bottom:20px;"></div>
+      <div class="list-header"><h3 id="progress-count"></h3></div>
+      <div class="item-list" id="progress-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="note-modal">
+  <div class="modal">
+    <h3>New Note</h3>
+    <div class="form-group"><label>Title</label><input id="note-title" placeholder="Note title"/></div>
+    <div class="form-group"><label>Content</label><textarea id="note-content" placeholder="Write your note..."></textarea></div>
+    <div class="form-group"><label>Tags (comma separated)</label><input id="note-tags" placeholder="e.g. python, pandas"/></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal('note-modal')">Cancel</button><button class="btn" onclick="saveNote()">Save</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="task-modal">
+  <div class="modal">
+    <h3>New Task</h3>
+    <div class="form-group"><label>Title</label><input id="task-title" placeholder="What needs to be done?"/></div>
+    <div class="form-group"><label>Description</label><textarea id="task-desc" placeholder="Optional details..."></textarea></div>
+    <div class="form-group"><label>Deadline</label><input id="task-deadline" type="date"/></div>
+    <div class="form-group"><label>Priority</label>
+      <select id="task-priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select>
+    </div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal('task-modal')">Cancel</button><button class="btn" onclick="saveTask()">Add Task</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="progress-modal">
+  <div class="modal">
+    <h3>Log Learning Session</h3>
+    <div class="form-group"><label>Topic</label><input id="log-topic" placeholder="What did you study?"/></div>
+    <div class="form-group"><label>Summary</label><textarea id="log-summary" placeholder="Brief summary..."></textarea></div>
+    <div class="form-group"><label>Resource/Link</label><input id="log-resource" placeholder="e.g. tutorial URL"/></div>
+    <div class="form-group"><label>Time spent (minutes)</label><input id="log-time" type="number" placeholder="30"/></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal('progress-modal')">Cancel</button><button class="btn" onclick="saveProgress()">Log</button></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ======= ROUTING =======
+const sessionId = localStorage.getItem('buddy_session') || crypto.randomUUID().slice(0,8);
+localStorage.setItem('buddy_session', sessionId);
+let currentPage = 'dashboard';
+
+document.querySelectorAll('.nav a').forEach(el => {
+  el.addEventListener('click', e => {
+    e.preventDefault();
+    const page = el.dataset.page;
+    document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    currentPage = page;
+    if (page === 'dashboard') loadDashboard();
+    if (page === 'notes') loadNotes();
+    if (page === 'tasks') loadTasks();
+    if (page === 'progress') loadProgress();
+  });
+});
+
+// ======= TOAST =======
+function toast(msg, type='success') {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ======= MODAL =======
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ======= DASHBOARD =======
+async function loadDashboard() {
+  try {
+    const [notes, tasks, progress] = await Promise.all([
+      fetch('/api/notes').then(r=>r.json()),
+      fetch('/api/tasks').then(r=>r.json()),
+      fetch('/api/progress').then(r=>r.json()),
+    ]);
+    const pending = tasks.filter(t => t.status === 'pending').length;
+    const totalTime = progress.reduce((s,l) => s + (l.time_spent || 0), 0);
+
+    document.getElementById('stats-cards').innerHTML = `
+      <div class="card"><div class="num">${notes.length}</div><div class="label">Notes saved</div></div>
+      <div class="card"><div class="num">${pending}</div><div class="label">Pending tasks</div></div>
+      <div class="card"><div class="num">${progress.length}</div><div class="label">Study sessions</div></div>
+      <div class="card"><div class="num">${totalTime}m</div><div class="label">Total study time</div></div>
+    `;
+
+    const recent = document.getElementById('recent-activity');
+    const items = [];
+    progress.slice(0,3).forEach(l => items.push(`<div class="recent-item"><div class="title">${esc(l.topic)}</div><div class="meta">${esc(l.summary || '')} &middot; ${l.time_spent || 0}min</div></div>`));
+    notes.slice(0,3).forEach(n => items.push(`<div class="recent-item"><div class="title">${esc(n.title)}</div><div class="meta">${esc(n.tags || '')}</div></div>`));
+    recent.innerHTML = items.length ? items.join('') : '<div class="empty-state">No activity yet. Start learning!</div>';
+  } catch(e) { toast('Failed to load dashboard', 'error'); }
+}
+
+// ======= CHAT =======
+const chatMessages = document.getElementById('chat-messages');
+const chatInput = document.getElementById('chat-input');
+const chatSend = document.getElementById('chat-send');
+let chatLoading = false;
+
+chatInput.addEventListener('input', () => { chatSend.disabled = !chatInput.value.trim() || chatLoading; });
+chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !chatSend.disabled) sendMessage(); });
+
+function addMsg(role, content) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + role;
+  d.textContent = content;
+  chatMessages.appendChild(d);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function showTyping() {
+  const d = document.createElement('div'); d.className = 'typing'; d.id = 'typing';
+  d.innerHTML = '<span></span><span></span><span></span>';
+  chatMessages.appendChild(d);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function removeTyping() { const t = document.getElementById('typing'); if (t) t.remove(); }
+
+function sendSuggestion(text) { chatInput.value = text; sendMessage(); }
+
+async function sendMessage() {
+  const msg = chatInput.value.trim();
+  if (!msg || chatLoading) return;
+  chatInput.value = ''; chatSend.disabled = true;
+  document.getElementById('welcome-msg')?.remove();
+  addMsg('user', msg);
+  showTyping(); chatLoading = true;
+  try {
+    const res = await fetch('/api/chat', { method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({message: msg, session_id: sessionId}),
     });
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !sendBtn.disabled) sendMessage();
+    if (!res.ok) throw new Error('Server error');
+    const data = await res.json();
+    removeTyping(); addMsg('assistant', data.response);
+  } catch(e) {
+    removeTyping();
+    const d = document.createElement('div'); d.className = 'msg assistant'; d.textContent = 'Error: ' + e.message;
+    chatMessages.appendChild(d);
+  }
+  chatLoading = false;
+  chatSend.disabled = !chatInput.value.trim();
+}
+
+// ======= NOTES =======
+async function loadNotes() {
+  const q = document.getElementById('notes-search').value;
+  try {
+    const notes = await (q ? fetch('/api/notes?q='+encodeURIComponent(q)).then(r=>r.json()) : fetch('/api/notes').then(r=>r.json()));
+    document.getElementById('notes-count').textContent = notes.length + ' notes';
+    const list = document.getElementById('notes-list');
+    if (!notes.length) { list.innerHTML = '<div class="empty-state">No notes yet. Click "+ New Note" to start.</div>'; return; }
+    list.innerHTML = notes.map(n => `
+      <div class="item">
+        <div class="info">
+          <div class="title">${esc(n.title)}</div>
+          <div class="desc">${esc(n.content)}</div>
+          <div class="tags">${esc(n.tags || '')}</div>
+        </div>
+        <div class="actions"><button class="btn btn-sm btn-danger" onclick="deleteNote(${n.id})">Delete</button></div>
+      </div>
+    `).join('');
+  } catch(e) { toast('Failed to load notes', 'error'); }
+}
+
+async function saveNote() {
+  const title = document.getElementById('note-title').value.trim();
+  const content = document.getElementById('note-content').value.trim();
+  const tags = document.getElementById('note-tags').value.trim();
+  if (!title || !content) { toast('Title and content required', 'error'); return; }
+  try {
+    await fetch('/api/notes', { method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({title, content, tags}),
     });
+    closeModal('note-modal');
+    document.getElementById('note-title').value = '';
+    document.getElementById('note-content').value = '';
+    document.getElementById('note-tags').value = '';
+    toast('Note saved!');
+    loadNotes();
+  } catch(e) { toast('Failed to save note', 'error'); }
+}
 
-    function sendSuggestion(text) {
-      input.value = text;
-      sendMessage();
-    }
+async function deleteNote(id) {
+  if (!confirm('Delete this note?')) return;
+  try {
+    await fetch('/api/notes/'+id, { method:'DELETE' });
+    toast('Note deleted');
+    loadNotes();
+  } catch(e) { toast('Failed to delete', 'error'); }
+}
 
-    function addMessage(role, content) {
-      const div = document.createElement('div');
-      div.className = `msg ${role}`;
-      div.textContent = content;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-    }
+// ======= TASKS =======
+let taskFilter = 'all';
 
-    function showTyping() {
-      const div = document.createElement('div');
-      div.className = 'typing';
-      div.id = 'typing';
-      div.innerHTML = '<span></span><span></span><span></span>';
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-    }
+async function loadTasks() {
+  try {
+    const url = taskFilter && taskFilter !== 'all' ? '/api/tasks?status='+taskFilter : '/api/tasks';
+    const tasks = await fetch(url).then(r=>r.json());
+    const pending = tasks.filter(t => t.status === 'pending').length;
+    document.getElementById('tasks-count').textContent = taskFilter === 'all' ? `${pending} pending, ${tasks.length-pending} done` : tasks.length + ' tasks';
+    const list = document.getElementById('tasks-list');
+    if (!tasks.length) { list.innerHTML = '<div class="empty-state">No tasks. Add one to get started!</div>'; return; }
+    list.innerHTML = tasks.map(t => {
+      const cls = t.status === 'completed' ? 'item task-completed' : 'item task-pending';
+      const prio = 'priority-badge priority-' + t.priority;
+      const deadline = t.deadline ? ' &middot; due ' + t.deadline : '';
+      return `<div class="${cls}">
+        <div class="info">
+          <div class="title">${esc(t.title)}<span class="${prio}">${t.priority}</span></div>
+          <div class="desc">${esc(t.description || '')}${deadline}</div>
+        </div>
+        <div class="actions">
+          ${t.status === 'pending' ? `<button class="btn btn-sm btn-green" onclick="completeTask(${t.id})">Done</button>` : ''}
+          <button class="btn btn-sm btn-danger" onclick="deleteTask(${t.id})">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { toast('Failed to load tasks', 'error'); }
+}
 
-    function removeTyping() {
-      const t = document.getElementById('typing');
-      if (t) t.remove();
-    }
+function filterTasks(filter) {
+  taskFilter = filter;
+  document.querySelectorAll('[data-filter]').forEach(b => {
+    b.style.borderColor = b.dataset.filter === filter ? 'var(--accent)' : 'var(--border)';
+    b.style.color = b.dataset.filter === filter ? 'var(--text)' : 'var(--text2)';
+  });
+  loadTasks();
+}
 
-    async function sendMessage() {
-      const msg = input.value.trim();
-      if (!msg || loading) return;
-      input.value = '';
-      sendBtn.disabled = true;
-      welcome?.remove();
+async function saveTask() {
+  const title = document.getElementById('task-title').value.trim();
+  const description = document.getElementById('task-desc').value.trim();
+  const deadline = document.getElementById('task-deadline').value;
+  const priority = document.getElementById('task-priority').value;
+  if (!title) { toast('Title required', 'error'); return; }
+  try {
+    await fetch('/api/tasks', { method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({title, description, deadline, priority}),
+    });
+    closeModal('task-modal');
+    document.getElementById('task-title').value = '';
+    document.getElementById('task-desc').value = '';
+    document.getElementById('task-deadline').value = '';
+    toast('Task added!');
+    loadTasks();
+  } catch(e) { toast('Failed to add task', 'error'); }
+}
 
-      addMessage('user', msg);
-      showTyping();
-      loading = true;
+async function completeTask(id) {
+  try {
+    await fetch('/api/tasks/'+id+'/complete', { method:'PUT' });
+    toast('Task completed!');
+    loadTasks();
+  } catch(e) { toast('Failed', 'error'); }
+}
 
-      try {
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: msg, session_id: sessionId }),
-        });
-        if (!res.ok) throw new Error(`Server error: ${res.status}`);
-        const data = await res.json();
-        removeTyping();
-        addMessage('assistant', data.response);
-      } catch (err) {
-        removeTyping();
-        const errDiv = document.createElement('div');
-        errDiv.className = 'error-msg';
-        errDiv.textContent = `⚠️ ${err.message}`;
-        chat.appendChild(errDiv);
-      }
-      loading = false;
-      sendBtn.disabled = !input.value.trim();
-    }
-  </script>
+async function deleteTask(id) {
+  if (!confirm('Delete this task?')) return;
+  try {
+    await fetch('/api/tasks/'+id, { method:'DELETE' });
+    toast('Task deleted');
+    loadTasks();
+  } catch(e) { toast('Failed to delete', 'error'); }
+}
+
+// ======= PROGRESS =======
+async function loadProgress() {
+  try {
+    const logs = await fetch('/api/progress').then(r=>r.json());
+    const totalTime = logs.reduce((s,l) => s + (l.time_spent || 0), 0);
+    document.getElementById('progress-stats').innerHTML = `
+      <div class="card"><div class="num">${logs.length}</div><div class="label">Study sessions</div></div>
+      <div class="card"><div class="num">${totalTime}</div><div class="label">Total minutes</div></div>
+    `;
+    document.getElementById('progress-count').textContent = logs.length + ' entries';
+    const list = document.getElementById('progress-list');
+    if (!logs.length) { list.innerHTML = '<div class="empty-state">No study sessions logged yet. Start learning!</div>'; return; }
+    list.innerHTML = logs.map(l => `
+      <div class="item">
+        <div class="info">
+          <div class="title">${esc(l.topic)}</div>
+          <div class="desc">${esc(l.summary || '')}${l.resource ? ' &middot; '+esc(l.resource) : ''}</div>
+          <div class="tags">${l.time_spent ? l.time_spent+'min' : ''} &middot; ${l.created_at?.slice(0,10) || ''}</div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { toast('Failed to load progress', 'error'); }
+}
+
+async function saveProgress() {
+  const topic = document.getElementById('log-topic').value.trim();
+  const summary = document.getElementById('log-summary').value.trim();
+  const resource = document.getElementById('log-resource').value.trim();
+  const time_spent = parseInt(document.getElementById('log-time').value) || 0;
+  if (!topic) { toast('Topic required', 'error'); return; }
+  try {
+    await fetch('/api/progress', { method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({topic, summary, resource, time_spent}),
+    });
+    closeModal('progress-modal');
+    document.getElementById('log-topic').value = '';
+    document.getElementById('log-summary').value = '';
+    document.getElementById('log-resource').value = '';
+    document.getElementById('log-time').value = '';
+    toast('Progress logged!');
+    loadProgress();
+  } catch(e) { toast('Failed to log', 'error'); }
+}
+
+function esc(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// Init
+loadDashboard();
+</script>
 </body>
 </html>
