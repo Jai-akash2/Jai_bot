@@ -75,7 +75,8 @@ def create_mentor_agent(
         tools=tools,
         verbose=True,
         handle_parsing_errors=True,
-        max_iterations=3,
+        max_iterations=8,
+        max_execution_time=30,
     )
 
 
