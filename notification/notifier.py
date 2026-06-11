@@ -9,15 +9,7 @@ from memory import db
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 
-INDIAN_SMS_GATEWAYS = [
-    "airtelap.com", "jio.com", "jimsg.com",
-    "vodafone.co.in", "bsnl.in", "sms.bsnl.in",
-    "ideacellular.net",
-]
-
 def get_config():
-    phone = os.getenv("SMS_PHONE", "")
-    carrier = os.getenv("SMS_CARRIER", "").lower().strip()
     return {
         "email_enabled": os.getenv("NOTIFY_EMAIL", "").lower() == "true",
         "email_from": os.getenv("EMAIL_FROM", ""),
@@ -26,9 +18,11 @@ def get_config():
         "smtp_port": int(os.getenv("SMTP_PORT", "587")),
         "smtp_user": os.getenv("SMTP_USER", ""),
         "smtp_pass": os.getenv("SMTP_PASS", ""),
+        "whatsapp_enabled": bool(os.getenv("WHATSAPP_API_KEY")),
+        "whatsapp_phone": os.getenv("WHATSAPP_PHONE", "").replace(" ", ""),
+        "whatsapp_api_key": os.getenv("WHATSAPP_API_KEY", ""),
         "sms_enabled": os.getenv("NOTIFY_SMS", "").lower() == "true",
-        "sms_phone": phone,
-        "sms_carrier": carrier,
+        "sms_phone": os.getenv("SMS_PHONE", ""),
     }
 
 
@@ -51,41 +45,22 @@ def send_email(subject: str, body: str) -> str:
         return f"Email failed: {e}"
 
 
-def send_sms(message: str) -> str:
+def send_whatsapp(message: str) -> str:
     cfg = get_config()
-    if not cfg["sms_enabled"] or not cfg["sms_phone"]:
-        return "SMS not configured"
-    phone = cfg["sms_phone"].replace("+91", "").replace(" ", "")
-    # Try Textbelt (free: 1 SMS/day)
+    if not cfg["whatsapp_enabled"]:
+        return "WhatsApp not configured"
+    import httpx
     try:
-        import httpx
-        resp = httpx.post("https://textbelt.com/text", data={
-            "phone": "91" + phone,
-            "message": message[:160],
-            "key": "textbelt",
+        resp = httpx.get("https://api.callmebot.com/whatsapp.php", params={
+            "phone": cfg["whatsapp_phone"],
+            "text": message[:160],
+            "apikey": cfg["whatsapp_api_key"],
         }, timeout=10)
-        data = resp.json()
-        if data.get("success"):
-            return "SMS sent via Textbelt"
-    except:
-        pass
-    # Fallback: try Indian carrier email gateways
-    try:
-        msg = MIMEText(message, "plain")
-        msg["From"] = cfg["email_from"]
-        msg["Subject"] = "Buddy Alert"
-        with smtplib.SMTP(cfg["smtp_server"], cfg["smtp_port"], timeout=8) as server:
-            server.starttls()
-            server.login(cfg["smtp_user"], cfg["smtp_pass"])
-            for to_addr in [f"{phone}@{d}" for d in INDIAN_SMS_GATEWAYS]:
-                try:
-                    msg["To"] = to_addr
-                    server.send_message(msg)
-                except:
-                    continue
-        return "SMS sent via email gateway"
+        if resp.status_code == 200 and "sent" in resp.text.lower():
+            return "WhatsApp sent"
+        return f"WhatsApp failed: {resp.text[:100]}"
     except Exception as e:
-        return f"SMS failed: {e}"
+        return f"WhatsApp error: {e}"
 
 
 def get_tasks_due_soon() -> list[dict]:
@@ -123,9 +98,9 @@ def check_and_notify() -> list[dict]:
 
         results.append({"task": t["title"], "message": msg})
 
+        wa_r = send_whatsapp(msg)
         email_r = send_email("Buddy Task Alert", msg)
-        sms_r = send_sms(msg)
 
-        if "sent" in email_r or "sent" in sms_r:
-            print(f"Notification sent for: {t['title']}")
+        if "sent" in wa_r or "sent" in email_r:
+            print(f"Notification sent for: {t['title']} ({wa_r}, {email_r})")
     return results

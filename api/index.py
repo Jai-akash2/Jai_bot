@@ -60,11 +60,16 @@ _agent = None
 def get_agent():
     global _agent
     if _agent is None:
-        api_key = os.getenv("OPENROUTER_API_KEY")
+        groq_key = os.getenv("GROQ_API_KEY")
+        or_key = os.getenv("OPENROUTER_API_KEY")
         model = os.getenv("OPENROUTER_MODEL", "openrouter/free")
-        if not api_key:
-            raise ValueError("OPENROUTER_API_KEY not set")
-        _agent = create_mentor_agent(api_key, model)
+        if not groq_key and not or_key:
+            raise ValueError("No API key set (GROQ_API_KEY or OPENROUTER_API_KEY)")
+        _agent = create_mentor_agent(
+            groq_api_key=groq_key or "",
+            openrouter_api_key=or_key or "",
+            model=model,
+        )
     return _agent
 
 

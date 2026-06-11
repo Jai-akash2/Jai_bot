@@ -1,6 +1,7 @@
 import os
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from agent.tools import WebSearchTool, ExtractContentTool
@@ -44,22 +45,32 @@ Current date: 2026-06-12"""
 
 
 def create_mentor_agent(
-    api_key: str,
+    groq_api_key: str = "",
+    openrouter_api_key: str = "",
     model: str = "openrouter/free",
     temperature: float = 0.7,
 ) -> AgentExecutor:
-    llm = ChatOpenAI(
-        api_key=api_key,
-        base_url="https://openrouter.ai/api/v1",
-        model=model,
-        temperature=temperature,
-        timeout=20,
-        max_retries=1,
-        default_headers={
-            "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", ""),
-            "X-Title": os.getenv("OPENROUTER_APP_NAME", "DS-Mentor-Bot"),
-        },
-    )
+    if groq_api_key:
+        llm = ChatGroq(
+            api_key=groq_api_key,
+            model="llama-3.3-70b-versatile",
+            temperature=temperature,
+            timeout=30,
+            max_retries=1,
+        )
+    else:
+        llm = ChatOpenAI(
+            api_key=openrouter_api_key,
+            base_url="https://openrouter.ai/api/v1",
+            model=model,
+            temperature=temperature,
+            timeout=30,
+            max_retries=1,
+            default_headers={
+                "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", ""),
+                "X-Title": os.getenv("OPENROUTER_APP_NAME", "DS-Mentor-Bot"),
+            },
+        )
 
     tools = [WebSearchTool(), ExtractContentTool(), *get_memory_tools()]
 
