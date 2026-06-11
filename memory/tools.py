@@ -99,7 +99,7 @@ class ListTasksTool(BaseTool):
 
 
 class CompleteTaskInput(BaseModel):
-    task_id: int = Field(description="ID of the task to mark complete")
+    task_id: str = Field(description="ID of the task to mark complete (number)")
 
 
 class CompleteTaskTool(BaseTool):
@@ -107,12 +107,13 @@ class CompleteTaskTool(BaseTool):
     description: str = "Mark a task as completed by its ID."
     args_schema: Type[BaseModel] = CompleteTaskInput
 
-    def _run(self, task_id: int) -> str:
-        if db.complete_task(task_id):
-            return f"Task {task_id} marked completed."
-        return f"Task {task_id} not found."
+    def _run(self, task_id: str) -> str:
+        tid = int(task_id)
+        if db.complete_task(tid):
+            return f"Task {tid} marked completed."
+        return f"Task {tid} not found."
 
-    async def _arun(self, task_id: int) -> str:
+    async def _arun(self, task_id: str) -> str:
         return self._run(task_id)
 
 
@@ -122,7 +123,7 @@ class LogLearningInput(BaseModel):
     topic: str = Field(description="The topic you studied")
     summary: str = Field(default="", description="Brief summary of what you learned")
     resource: str = Field(default="", description="Optional link/resource used")
-    time_spent: int = Field(default=0, description="Minutes spent learning")
+    time_spent: str = Field(default="0", description="Minutes spent learning (number)")
 
 
 class LogLearningTool(BaseTool):
@@ -130,11 +131,12 @@ class LogLearningTool(BaseTool):
     description: str = "Log what you learned today. Use this to track your learning progress over time."
     args_schema: Type[BaseModel] = LogLearningInput
 
-    def _run(self, topic: str, summary: str = "", resource: str = "", time_spent: int = 0) -> str:
-        log_id = db.log_learning(topic, summary, resource, time_spent)
+    def _run(self, topic: str, summary: str = "", resource: str = "", time_spent: str = "0") -> str:
+        mins = int(time_spent) if time_spent else 0
+        log_id = db.log_learning(topic, summary, resource, mins)
         return f"Logged learning: {topic} (id: {log_id})"
 
-    async def _arun(self, topic: str, summary: str = "", resource: str = "", time_spent: int = 0) -> str:
+    async def _arun(self, topic: str, summary: str = "", resource: str = "", time_spent: str = "0") -> str:
         return self._run(topic, summary, resource, time_spent)
 
 
