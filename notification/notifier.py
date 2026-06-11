@@ -3,10 +3,21 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 from memory import db
 
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+
+
+INDIAN_SMS_GATEWAYS = [
+    "airtelap.com", "jio.com", "jimsg.com",
+    "vodafone.co.in", "bsnl.in", "sms.bsnl.in",
+    "ideacellular.net",
+]
 
 def get_config():
+    phone = os.getenv("SMS_PHONE", "")
+    carrier = os.getenv("SMS_CARRIER", "").lower().strip()
     return {
         "email_enabled": os.getenv("NOTIFY_EMAIL", "").lower() == "true",
         "email_from": os.getenv("EMAIL_FROM", ""),
@@ -15,8 +26,9 @@ def get_config():
         "smtp_port": int(os.getenv("SMTP_PORT", "587")),
         "smtp_user": os.getenv("SMTP_USER", ""),
         "smtp_pass": os.getenv("SMTP_PASS", ""),
-        "wa_enabled": os.getenv("NOTIFY_WHATSAPP", "").lower() == "true",
-        "wa_phone": os.getenv("WHATSAPP_PHONE", ""),
+        "sms_enabled": os.getenv("NOTIFY_SMS", "").lower() == "true",
+        "sms_phone": phone,
+        "sms_carrier": carrier,
     }
 
 
@@ -30,7 +42,7 @@ def send_email(subject: str, body: str) -> str:
         msg["To"] = cfg["email_to"] or cfg["smtp_user"]
         msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain"))
-        with smtplib.SMTP(cfg["smtp_server"], cfg["smtp_port"]) as server:
+        with smtplib.SMTP(cfg["smtp_server"], cfg["smtp_port"], timeout=10) as server:
             server.starttls()
             server.login(cfg["smtp_user"], cfg["smtp_pass"])
             server.send_message(msg)
@@ -39,19 +51,29 @@ def send_email(subject: str, body: str) -> str:
         return f"Email failed: {e}"
 
 
-def send_whatsapp(message: str) -> str:
+def send_sms(message: str) -> str:
     cfg = get_config()
-    if not cfg["wa_enabled"] or not cfg["wa_phone"]:
-        return "WhatsApp not configured"
+    if not cfg["sms_enabled"] or not cfg["sms_phone"]:
+        return "SMS not configured"
+    phone = cfg["sms_phone"].replace("+91", "").replace(" ", "")
+    carrier = cfg["sms_carrier"]
+    domains = [f"{phone}@{carrier}"] if carrier else [f"{phone}@{d}" for d in INDIAN_SMS_GATEWAYS]
     try:
-        import pywhatkit
-        phone = cfg["wa_phone"]
-        if not phone.startswith("+"):
-            phone = "+91" + phone
-        pywhatkit.sendwhatmsg_instantly(phone, message, wait_time=15, tab_close=True)
-        return "WhatsApp sent"
+        msg = MIMEText(message, "plain")
+        msg["From"] = cfg["email_from"]
+        msg["Subject"] = "Buddy Alert"
+        with smtplib.SMTP(cfg["smtp_server"], cfg["smtp_port"], timeout=10) as server:
+            server.starttls()
+            server.login(cfg["smtp_user"], cfg["smtp_pass"])
+            for to_addr in domains:
+                try:
+                    msg["To"] = to_addr
+                    server.send_message(msg)
+                except:
+                    continue
+        return "SMS sent via email gateway"
     except Exception as e:
-        return f"WhatsApp failed: {e}"
+        return f"SMS failed: {e}"
 
 
 def get_tasks_due_soon() -> list[dict]:
@@ -90,8 +112,8 @@ def check_and_notify() -> list[dict]:
         results.append({"task": t["title"], "message": msg})
 
         email_r = send_email("Buddy Task Alert", msg)
-        wa_r = send_whatsapp(msg)
+        sms_r = send_sms(msg)
 
-        if "sent" in email_r or "sent" in wa_r:
+        if "sent" in email_r or "sent" in sms_r:
             print(f"Notification sent for: {t['title']}")
     return results

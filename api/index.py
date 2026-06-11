@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from agent.mentor_agent import create_mentor_agent, format_history
 from memory import db
+import threading
 from notification.notifier import check_and_notify
 
 load_dotenv()
@@ -101,7 +102,7 @@ async def health():
 
 @app.get("/api/notifications/check")
 async def check_notifications():
-    alerts = check_and_notify()
+    alerts = []
     tasks = db.list_tasks("pending")
     today = datetime.now().strftime("%Y-%m-%d")
     due = [t for t in tasks if t["deadline"] == today]
@@ -157,11 +158,15 @@ async def list_tasks(status: str = ""):
     return db.list_tasks(status)
 
 
+def _notify_task():
+    try: check_and_notify()
+    except: pass
+
 @app.post("/api/tasks")
 async def create_task(payload: TaskPayload):
     task_id = db.add_task(payload.title, payload.description, payload.deadline, payload.priority, payload.recurring, payload.subtasks)
     if payload.deadline:
-        check_and_notify()
+        threading.Thread(target=_notify_task, daemon=True).start()
     return {"id": task_id, "message": "Task added"}
 
 
