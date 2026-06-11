@@ -56,16 +56,28 @@ def send_sms(message: str) -> str:
     if not cfg["sms_enabled"] or not cfg["sms_phone"]:
         return "SMS not configured"
     phone = cfg["sms_phone"].replace("+91", "").replace(" ", "")
-    carrier = cfg["sms_carrier"]
-    domains = [f"{phone}@{carrier}"] if carrier else [f"{phone}@{d}" for d in INDIAN_SMS_GATEWAYS]
+    # Try Textbelt (free: 1 SMS/day)
+    try:
+        import httpx
+        resp = httpx.post("https://textbelt.com/text", data={
+            "phone": "91" + phone,
+            "message": message[:160],
+            "key": "textbelt",
+        }, timeout=10)
+        data = resp.json()
+        if data.get("success"):
+            return "SMS sent via Textbelt"
+    except:
+        pass
+    # Fallback: try Indian carrier email gateways
     try:
         msg = MIMEText(message, "plain")
         msg["From"] = cfg["email_from"]
         msg["Subject"] = "Buddy Alert"
-        with smtplib.SMTP(cfg["smtp_server"], cfg["smtp_port"], timeout=10) as server:
+        with smtplib.SMTP(cfg["smtp_server"], cfg["smtp_port"], timeout=8) as server:
             server.starttls()
             server.login(cfg["smtp_user"], cfg["smtp_pass"])
-            for to_addr in domains:
+            for to_addr in [f"{phone}@{d}" for d in INDIAN_SMS_GATEWAYS]:
                 try:
                     msg["To"] = to_addr
                     server.send_message(msg)
