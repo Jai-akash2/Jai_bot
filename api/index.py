@@ -2,8 +2,11 @@ import os
 from typing import List, Optional
 from dotenv import load_dotenv
 
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from agent.mentor_agent import create_mentor_agent, format_history
@@ -11,6 +14,15 @@ from agent.mentor_agent import create_mentor_agent, format_history
 load_dotenv()
 
 app = FastAPI(title="DS Mentor Bot")
+
+PUBLIC_DIR = Path(__file__).resolve().parent.parent / "public"
+app.mount("/public", StaticFiles(directory=str(PUBLIC_DIR)), name="public")
+
+
+@app.get("/")
+async def serve_frontend():
+    return FileResponse(str(PUBLIC_DIR / "index.html"))
+
 
 app.add_middleware(
     CORSMiddleware,
