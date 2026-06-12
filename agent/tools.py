@@ -89,6 +89,6 @@ class ExtractContentTool(BaseTool):
 
         text = soup.get_text(separator="\n", strip=True)
         lines = [line.strip() for line in text.split("\n") if line.strip()]
-        content = "\n".join(lines[:200])
+        content = "\n".join(lines[:80])
 
-        return f"Content from {url}:\n\n{content[:8000]}"
+        return f"Content from {url}:\n\n{content[:3000]}"

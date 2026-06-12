@@ -56,7 +56,7 @@ def create_mentor_agent(
             api_key=groq_api_key,
             model="llama-3.3-70b-versatile",
             temperature=temperature,
-            timeout=30,
+            timeout=60,
             max_retries=1,
         )
     else:
@@ -89,8 +89,8 @@ def create_mentor_agent(
         tools=tools,
         verbose=True,
         handle_parsing_errors=True,
-        max_iterations=12,
-        max_execution_time=45,
+        max_iterations=8,
+        max_execution_time=60,
         early_stopping_method="generate",
     )
 
