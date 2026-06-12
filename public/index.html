@@ -452,6 +452,7 @@ const chatInp = document.getElementById('chat-input');
 const chatBtn = document.getElementById('chat-send');
 let chatLoad = false;
 chatInp.addEventListener('input', () => { chatBtn.disabled = !chatInp.value.trim() || chatLoad; });
+chatBtn.addEventListener('click', () => { if (!chatBtn.disabled) sendMsg(); });
 chatInp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !chatBtn.disabled) { e.preventDefault(); sendMsg(); } });
 
 function addMsg(role, html) {

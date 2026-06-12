@@ -1,5 +1,6 @@
 import os
 import uuid
+import asyncio
 from datetime import datetime
 from typing import List, Optional
 from dotenv import load_dotenv
@@ -55,21 +56,24 @@ class ChatResponse(BaseModel):
 
 
 _agent = None
+_agent_lock = asyncio.Lock()
 
 
-def get_agent():
+async def get_agent():
     global _agent
     if _agent is None:
-        groq_key = os.getenv("GROQ_API_KEY")
-        or_key = os.getenv("OPENROUTER_API_KEY")
-        model = os.getenv("OPENROUTER_MODEL", "openrouter/free")
-        if not groq_key and not or_key:
-            raise ValueError("No API key set (GROQ_API_KEY or OPENROUTER_API_KEY)")
-        _agent = create_mentor_agent(
-            groq_api_key=groq_key or "",
-            openrouter_api_key=or_key or "",
-            model=model,
-        )
+        async with _agent_lock:
+            if _agent is None:
+                groq_key = os.getenv("GROQ_API_KEY")
+                or_key = os.getenv("OPENROUTER_API_KEY")
+                model = os.getenv("OPENROUTER_MODEL", "openrouter/free")
+                if not groq_key and not or_key:
+                    raise ValueError("No API key set (GROQ_API_KEY or OPENROUTER_API_KEY)")
+                _agent = create_mentor_agent(
+                    groq_api_key=groq_key or "",
+                    openrouter_api_key=or_key or "",
+                    model=model,
+                )
     return _agent
 
 
@@ -79,7 +83,7 @@ async def chat(request: ChatRequest):
     db.save_chat_message(session_id, "user", request.message)
     saved = db.get_chat_history(session_id, limit=20)
     history = format_history(saved)
-    agent = get_agent()
+    agent = await get_agent()
     for attempt in range(2):
         try:
             result = await agent.ainvoke({
@@ -91,8 +95,7 @@ async def chat(request: ChatRequest):
             return ChatResponse(response=response_text, session_id=session_id)
         except Exception as e:
             if attempt == 1:
-                raise HTTPException(status_code=500, detail=f"Buddy is thinking too hard. Try again! ({e})")
-            import asyncio
+                raise HTTPException(status_code=500, detail=str(e))
             await asyncio.sleep(1)
 
 
