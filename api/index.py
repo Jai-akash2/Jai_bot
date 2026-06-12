@@ -75,29 +75,25 @@ def get_agent():
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    try:
-        session_id = request.session_id or str(uuid.uuid4())[:8]
-
-        db.save_chat_message(session_id, "user", request.message)
-
-        saved = db.get_chat_history(session_id, limit=20)
-        history = format_history(saved)
-
-        agent = get_agent()
-        result = await agent.ainvoke({
-            "input": request.message,
-            "chat_history": history,
-        })
-
-        response_text = result["output"]
-        db.save_chat_message(session_id, "assistant", response_text)
-
-        return ChatResponse(
-            response=response_text,
-            session_id=session_id,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    session_id = request.session_id or str(uuid.uuid4())[:8]
+    db.save_chat_message(session_id, "user", request.message)
+    saved = db.get_chat_history(session_id, limit=20)
+    history = format_history(saved)
+    agent = get_agent()
+    for attempt in range(2):
+        try:
+            result = await agent.ainvoke({
+                "input": request.message,
+                "chat_history": history,
+            })
+            response_text = result["output"]
+            db.save_chat_message(session_id, "assistant", response_text)
+            return ChatResponse(response=response_text, session_id=session_id)
+        except Exception as e:
+            if attempt == 1:
+                raise HTTPException(status_code=500, detail=f"Buddy is thinking too hard. Try again! ({e})")
+            import asyncio
+            await asyncio.sleep(1)
 
 
 @app.get("/api/health")
